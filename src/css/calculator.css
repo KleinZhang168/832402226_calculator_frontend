@@ -1,0 +1,317 @@
+/**
+ * calculator.css -- Styles for the calculator main page.
+ *
+ * The structure matches the original pages/index/index.vue:
+ *   top bar (in base.css) -> display area -> flexible spacer -> frosted glass keypad -> footer note
+ * Unit note: 1rem = screen width / 37.5, matching the original project's rpx system (see tokens.css).
+ */
+
+/* ==================================================================
+   Page skeleton
+   ================================================================== */
+
+.calc {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ==================================================================
+   Display area
+   ================================================================== */
+
+.calc__display {
+  flex: 0 0 auto;
+  margin-top: 0.625rem;
+  padding: 0.8125rem 0.875rem 0.6875rem;
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-md);
+}
+
+.calc__input-row {
+  display: flex;
+  align-items: center;
+}
+
+.calc__input {
+  width: 100%;
+  height: 2.25rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: var(--fs-input);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.0313rem;
+}
+
+.calc__input:focus {
+  outline: none;
+}
+
+.calc__input::placeholder {
+  color: var(--ink-ghost);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+/* Scroll an overlong expression horizontally instead of bursting the panel */
+.calc__input[readonly] {
+  cursor: default;
+}
+
+.calc__divider {
+  height: 1px;
+  margin: 0.4375rem 0 0.375rem;
+  background: rgba(152, 64, 79, 0.14);
+}
+
+.calc__result {
+  display: flex;
+  align-items: flex-start;
+  min-height: 1.9375rem;
+}
+
+.calc__result-sign {
+  flex: 0 0 auto;
+  width: 1.3125rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.9375rem;
+  color: var(--primary);
+}
+
+.calc__result-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-result);
+  font-weight: 700;
+  line-height: 1.9375rem;
+  color: var(--primary);
+  word-break: break-all;
+}
+
+.calc__result-text--muted {
+  font-size: var(--fs-hint);
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+.calc__result-text--error {
+  font-size: var(--fs-hint);
+  font-weight: 400;
+  line-height: 1.4375rem;
+  color: var(--danger);
+  white-space: pre-wrap;
+}
+
+/* Committed result: solid primary color */
+.calc__result-text--final {
+  color: var(--primary);
+}
+
+/* Live preview result: lighter color plus a dotted underline to signal "not committed yet" */
+.calc__result-text--preview {
+  color: var(--primary-light);
+  text-decoration: underline dotted rgba(152, 64, 79, 0.45);
+  text-underline-offset: 0.25rem;
+}
+
+/* While the user has edited the expression and the new result is still pending, fade the whole old result */
+.calc__result-text--stale {
+  opacity: 0.45;
+}
+
+.calc__meta {
+  margin-top: 0.25rem;
+  font-size: var(--fs-small);
+  color: var(--ink-faint);
+  word-break: break-all;
+}
+
+/* ==================================================================
+   Flexible spacer: lets the character in the background image show through
+   ================================================================== */
+
+.calc__spacer {
+  flex: 1 1 auto;
+  min-height: 0.75rem;
+}
+
+/* ==================================================================
+   Keypad
+   ================================================================== */
+
+.calc__keypad {
+  flex: 0 0 auto;
+  padding: 0.4375rem;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 2rem;
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: var(--shadow-md);
+  /* Frosted glass: lets the character in the background image shimmer faintly through the keypad; unsupported browsers ignore it silently */
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.calc__key-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.calc__key {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--key-height);
+  margin: var(--key-gap);
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 1.375rem;
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: 0 0.1875rem 0.625rem rgba(122, 48, 64, 0.08);
+  transition: transform var(--duration-fast) var(--ease), opacity var(--duration-fast) var(--ease);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.calc__key:active,
+.calc__key.is-pressed {
+  transform: scale(0.95);
+  opacity: 0.78;
+}
+
+.calc__key-text {
+  font-size: var(--fs-key);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1;
+}
+
+/* Icon key (backspace): uses inline SVG so it does not depend on system fonts */
+.calc__key-icon {
+  display: block;
+  width: 1.375rem;
+  height: 1.375rem;
+  color: var(--ink-soft);
+}
+
+/* Number keys are the most solid and function keys the most transparent, creating depth */
+.calc__key--num {
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.calc__key--func {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.calc__key--func .calc__key-text {
+  font-size: var(--fs-key-func);
+  color: var(--ink-soft);
+}
+
+/* Operators */
+.calc__key--op {
+  border-color: rgba(152, 64, 79, 0.24);
+  background: rgba(152, 64, 79, 0.14);
+}
+
+.calc__key--op .calc__key-text {
+  font-size: 1.4375rem;
+  color: var(--primary);
+}
+
+/* Equals */
+.calc__key--equals {
+  border-color: rgba(122, 48, 64, 0.5);
+  background: linear-gradient(150deg, #ac4c5e 0%, #7a3040 100%);
+  box-shadow: 0 0.375rem 1rem rgba(122, 48, 64, 0.3);
+}
+
+.calc__key--equals .calc__key-text {
+  font-size: var(--fs-result);
+  color: #ffffff;
+}
+
+/* Fade the whole keypad while a request is in flight, preventing duplicate submissions */
+.calc__keypad.is-busy .calc__key {
+  opacity: 0.55;
+}
+
+.calc__keypad.is-busy .calc__key--equals {
+  opacity: 0.85;
+}
+
+/* Keys that accept a power operator on long press get a small corner dot at the top right */
+.calc__key[data-long-value]::after {
+  content: '';
+  position: absolute;
+  top: 0.4375rem;
+  right: 0.4375rem;
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background: rgba(152, 64, 79, 0.45);
+}
+
+/* Long-press hint */
+.calc__hint {
+  flex: 0 0 auto;
+  padding: 0.375rem 0 0.25rem;
+  font-size: var(--fs-small);
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+/* ==================================================================
+   Footer note
+   ================================================================== */
+
+.calc__footer {
+  flex: 0 0 auto;
+  padding: 0.125rem 0 0;
+  font-size: var(--fs-small);
+  color: var(--ink-faint);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ==================================================================
+   S1 diagnostics panel (used during the skeleton phase to confirm the backend address; no longer rendered by the final view)
+   ================================================================== */
+
+.calc__diagnostics {
+  flex: 0 0 auto;
+  margin-bottom: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
+
+.calc__diag-line {
+  margin: 0.125rem 0;
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  word-break: break-all;
+}
+
+/* ==================================================================
+   Narrow / short screen adaptation
+   ================================================================== */
+
+@media (max-height: 40rem) {
+  :root {
+    --key-height: 2.875rem;
+    --fs-result: 1.375rem;
+  }
+
+  .calc__spacer {
+    min-height: 0.25rem;
+  }
+}

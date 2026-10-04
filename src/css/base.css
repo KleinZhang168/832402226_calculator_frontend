@@ -1,0 +1,561 @@
+/**
+ * base.css -- global base styles.
+ *
+ * Contains four parts:
+ *   1. Document-level settings (font size scales with screen width, matching the
+ *      original project's rpx system)
+ *   2. Background layer (background image + soft white veil)
+ *   3. Page shell (full screen on mobile, centred at phone width on desktop)
+ *   4. Shared components (chip pills, btn buttons, toast notices, dialog confirm
+ *      modal, form controls)
+ */
+
+/* ==================================================================
+   1. Document-level settings
+   ==================================================================
+   The original project used rpx: 750rpx = screen width. Here we use the
+   equivalent rem approach:
+     html { font-size: 2.6667vw }  =>  1rem = screen width / 37.5
+     750rpx (= 100vw) corresponds to 37.5rem
+
+   * Key point: the scaling basis must be the SMALLER of "screen width" and
+     "screen height at 9:16".
+     If we scaled by screen width alone, a wide, flat window (e.g. 1074x595)
+     would blow the text up according to its width, while the available height
+     is only that small, so the keypad gets pushed out of the viewport
+     (measured: keypadBottomClipped=true).
+     Taking the minimum for --unit keeps the content fully visible at any
+     window ratio.
+     A px fallback is kept as well: browsers too old to support these functions
+     simply ignore the second line.
+   ================================================================== */
+
+:root {
+  --shell-max: 30rem;
+  /* Shell width: fills narrow screens, capped at 30rem on wide ones.
+     It is also constrained by "viewport height converted back through 9:16" --
+     if the window is very short and the shell were still that wide, the
+     portrait background image would be cropped heavily at top and bottom.
+     With this term the shell always stays close to 9:16, so using cover for
+     the background image yields essentially zero cropping. */
+  --shell-w: min(100vw, var(--shell-max), calc(100dvh * 9 / 16));
+  /* Shell height: exactly 16/9 of the width, i.e. a phone screen centred on
+     the page at the same aspect ratio */
+  --shell-h: calc(var(--shell-w) * 16 / 9);
+
+  /* Scaling unit (determined by a measured sweep):
+       100vw / 30   -- on phones 1rem = screen width / 30, and the keypad
+                       height stays close to the original design ratio;
+       100dvh / 40  -- when the window is very short, hold the whole interface
+                       to the height so content is not pushed out of the
+                       viewport
+                       (the divisor 40 was derived backwards from measurements:
+                       content height is roughly linear in the root font size;
+                       at /37 a 900px-tall window was still 49px short, while
+                       /40 just fits).
+     * Only viewport units may be used here, never rem: because this IS the
+       html font-size, referencing rem inside the formula would be circular,
+       and the browser would fall back to the default 16px and inflate the
+       whole interface. */
+  --unit: min(calc(100vw / 30), calc(100dvh / 40));
+}
+
+html {
+  font-size: 14px;
+  font-size: var(--unit);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* In-page scrolling is delegated to the list containers; body itself does not scroll */
+body.is-locked {
+  overflow: hidden;
+}
+
+button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input {
+  font: inherit;
+  color: inherit;
+}
+
+/* Unified keyboard-accessible focus style */
+:focus-visible {
+  outline: 0.125rem solid var(--primary);
+  outline-offset: 0.125rem;
+}
+
+/* Hide the scrollbar while keeping scrolling available (history list header) */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ==================================================================
+   2. Background layer
+   ==================================================================
+   The background extent must match the width of .shell. Otherwise the desktop
+   layout looks misaligned -- the background painted across the whole window
+   while the page occupies only a strip in the middle: at a viewport of
+   1074x595 (wide and flat), a 9:16 portrait image with cover scales up by
+   width and is cropped by roughly 42% top and bottom; the figure sits in the
+   lower part and is cropped away entirely.
+
+   Approach: the background layer is fixed positioned and uses grid internally
+   to stack the image and the veil; the width is locked to --shell-w (exactly
+   the same as .shell).
+   On narrow screens object-position: center bottom aligns the bottom edge,
+   while on wide screens it switches to contain to show the image in full.
+   ================================================================== */
+
+.app-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-color: var(--bg);
+}
+
+/*
+ * The image and the veil must be **stacked** in the same place (the veil over
+ * the image), so grid is used here to put both into the same cell rather than
+ * flex --
+ * with flex they would become two side-by-side flex items: the image would not
+ * be centred, the veil would sit to the right of the image, and on narrow
+ * screens the veil would even be squashed to zero width.
+ */
+.app-bg__inner {
+  display: grid;
+  width: var(--shell-w);
+  height: 100%;
+  max-height: var(--shell-h);
+  margin: 0 auto;
+}
+
+.app-bg__image,
+.app-bg__veil {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+}
+
+.app-bg__image {
+  display: block;
+  object-fit: cover;
+  /* Bottom-edge alignment: the figure in the background image is in the lower
+     part, so this keeps both the figure and the bottom watermark no matter how
+     the image is cropped */
+  object-position: center bottom;
+  /* Show the base colour while the image has failed to load or is still
+     loading, so the area never flashes white */
+  opacity: 1;
+  transition: opacity var(--duration-base) var(--ease);
+}
+
+.app-bg__image.is-hidden {
+  opacity: 0;
+}
+
+/*
+ * Soft veil: slightly brighter at the top and slightly more solid at the
+ * bottom, so text over the keypad area stays legible on any background.
+ * The values match .page-veil in the original index.vue.
+ */
+.app-bg__veil {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.28) 0%,
+    rgba(255, 255, 255, 0.04) 38%,
+    rgba(255, 255, 255, 0.1) 62%,
+    rgba(255, 255, 255, 0.34) 100%
+  );
+}
+
+/* The history page uses a more even veil, so long lists over dark areas stay easy to read */
+.app-bg__veil--soft {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.34) 0%,
+    rgba(255, 255, 255, 0.14) 30%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+}
+
+/* ==================================================================
+   3. Page shell
+   ==================================================================
+   The shell only handles positioning, width and height limits; the element
+   that actually holds the content is .shell__scroll, which scrolls
+   internally. That way, in an especially short window (e.g. 1074x595) even
+   very long content is not cut off -- the user can simply scroll to see it
+   all.
+   ================================================================== */
+
+.shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--shell-w);
+  /* Browsers without dvh support fall back to the 100vh on the previous line */
+  height: 100vh;
+  height: var(--shell-h);
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.shell__scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem
+    calc(0.75rem + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Desktop: add a faint boundary so it looks more like a phone preview */
+@media (min-width: 40rem) {
+  /* The base colour matches the background image's own base colour, so the
+     join is seamless;
+     a darker page colour is avoided so no harsh dark band appears on either
+     side of the phone-width column. */
+  body {
+    background: var(--bg);
+  }
+
+  .shell {
+    box-shadow: 0 1.5rem 4rem rgba(74, 59, 51, 0.18);
+  }
+
+  .shell__scroll {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* ==================================================================
+   4. Shared components
+   ================================================================== */
+
+/* ---------- Top bar ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  padding: 0.5rem 0.25rem 0.25rem;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.brand__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.3125rem;
+}
+
+/* The small "H5" badge: makes the H5 build instantly distinguishable from the Android build */
+.brand__tag {
+  padding: 0 0.3125rem;
+  border-radius: 0.25rem;
+  background: rgba(152, 64, 79, 0.14);
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.1rem;
+  color: var(--primary);
+  letter-spacing: 0.0313rem;
+}
+
+.brand__title {
+  font-size: var(--fs-brand);
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.0625rem;
+}
+
+.brand__sub {
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  letter-spacing: 0.0313rem;
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+/* ---------- Chip buttons (status / history entry) ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 1.875rem;
+  padding: 0 0.6875rem;
+  margin-left: 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.68);
+  transition: transform var(--duration-fast) var(--ease), opacity var(--duration-fast) var(--ease);
+}
+
+.chip:active {
+  transform: scale(0.96);
+  opacity: 0.78;
+}
+
+.chip__dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  margin-right: 0.3125rem;
+  border-radius: 50%;
+  background: #c0c0c0;
+  flex: 0 0 auto;
+}
+
+.chip--ok .chip__dot {
+  background: var(--success);
+}
+
+.chip--off .chip__dot {
+  background: var(--danger);
+}
+
+.chip__text {
+  font-size: 0.8125rem;
+  color: #6b5a4e;
+  white-space: nowrap;
+}
+
+.chip--off .chip__text {
+  color: #b04a46;
+}
+
+.chip--link .chip__text {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.9375rem;
+  padding: 0 0.8125rem;
+  margin-left: 0.375rem;
+  border: 1px solid rgba(152, 64, 79, 0.2);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.8);
+  transition: transform var(--duration-fast) var(--ease), opacity var(--duration-fast) var(--ease);
+}
+
+.btn:active {
+  transform: scale(0.96);
+  opacity: 0.75;
+}
+
+.btn--danger {
+  border-color: rgba(192, 57, 43, 0.28);
+  background: rgba(192, 57, 43, 0.1);
+}
+
+.btn--primary {
+  height: 2.25rem;
+  margin: 1.25rem auto 0;
+  padding: 0 1.25rem;
+  border-color: transparent;
+  background: linear-gradient(150deg, #ac4c5e 0%, #7a3040 100%);
+}
+
+.btn__text {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.btn__text--danger {
+  color: var(--danger);
+}
+
+.btn__text--light {
+  color: #ffffff;
+}
+
+/* ---------- Notice bar (toast) ---------- */
+.toast-layer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1rem;
+  pointer-events: none;
+}
+
+.toast {
+  max-width: min(24rem, 100%);
+  padding: 0.625rem 1rem;
+  border-radius: var(--radius-pill);
+  background: rgba(74, 59, 51, 0.9);
+  color: #fff;
+  font-size: var(--fs-body);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(0.625rem);
+  transition: opacity var(--duration-base) var(--ease), transform var(--duration-base) var(--ease);
+  box-shadow: var(--shadow-md);
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast--success {
+  background: rgba(44, 122, 84, 0.92);
+}
+
+.toast--error {
+  background: rgba(160, 44, 36, 0.92);
+}
+
+/* ---------- Confirmation dialog ---------- */
+.app-dialog {
+  width: min(20rem, calc(100vw - 3rem));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fffaf5;
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+}
+
+.app-dialog::backdrop {
+  background: rgba(58, 42, 36, 0.42);
+}
+
+.app-dialog__body {
+  padding: 1.25rem 1.25rem 0.5rem;
+}
+
+.app-dialog__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.app-dialog__text {
+  margin: 0;
+  font-size: var(--fs-body);
+  color: var(--ink-soft);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.app-dialog__actions {
+  display: flex;
+  gap: 0.625rem;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.app-dialog__btn {
+  flex: 1;
+  height: 2.375rem;
+  border: 1px solid rgba(152, 64, 79, 0.2);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.9);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.app-dialog__btn--primary {
+  border-color: transparent;
+  background: linear-gradient(150deg, #ac4c5e 0%, #7a3040 100%);
+  color: #ffffff;
+}
+
+.app-dialog__btn--danger {
+  border-color: transparent;
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.app-dialog__btn:active {
+  opacity: 0.78;
+}
+
+/* ---------- View container ---------- */
+.view-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ---------- Accessibility: visible to screen readers only ---------- */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Respect the system "reduce motion" setting ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

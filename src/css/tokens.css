@@ -1,0 +1,63 @@
+/**
+ * Design tokens (the equivalent of uni.scss in the mobile version).
+ *
+ * Every colour is taken from the background illustration static/bg.png:
+ *   base #EDDBC7 (warm beige), primary #98404F, body text #4A3B33.
+ *
+ * The mobile version uses rpx (750rpx = screen width). Here the same idea is
+ * expressed with rem plus clamp(): base.css derives the root font size from the
+ * viewport width, so 1rem scales linearly with the screen while clamp() keeps
+ * values from becoming too small or too large.
+ */
+
+:root {
+  /* ---------- Brand colours ---------- */
+  --primary: #98404F;
+  --primary-dark: #7A3040;
+  --primary-light: #C4747F;
+  --danger: #C0392B;
+  --success: #4CAF7D;
+
+  /* ---------- Background and text ---------- */
+  --bg: #EDDBC7;
+  --ink: #4A3B33;
+  --ink-soft: #7A6A5E;
+  --ink-faint: #A2948A;
+  --ink-ghost: #B7A797;
+
+  /* ---------- Panels (frosted glass) ---------- */
+  --panel: rgba(255, 255, 255, 0.62);
+  --panel-strong: rgba(255, 255, 255, 0.82);
+  --border: rgba(255, 255, 255, 0.72);
+  --shadow-sm: 0 0.25rem 0.875rem rgba(122, 48, 64, 0.07);
+  --shadow-md: 0 0.5rem 1.625rem rgba(122, 48, 64, 0.1);
+  --shadow-lg: 0 0.75rem 2.25rem rgba(122, 48, 64, 0.16);
+
+  /* ---------- Spacing (1rem = screen width / 37.5, see base.css) ---------- */
+  --radius-lg: 1.75rem;
+  --radius-md: 1.25rem;
+  --radius-sm: 0.875rem;
+  --radius-pill: 999rem;
+  --gap: 1rem;
+  --gap-sm: 0.625rem;
+
+  /* ---------- Font sizes ---------- */
+  --fs-brand: 1.3125rem;
+  --fs-sub: 0.75rem;
+  --fs-input: 1.4375rem;
+  --fs-result: 1.5rem;
+  --fs-hint: 0.9375rem;
+  --fs-key: 1.3125rem;
+  --fs-key-func: 1.125rem;
+  --fs-body: 0.875rem;
+  --fs-small: 0.75rem;
+
+  /* ---------- Keypad ---------- */
+  --key-height: 3.1875rem;
+  --key-gap: 0.4375rem;
+
+  /* ---------- Motion ---------- */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+}
